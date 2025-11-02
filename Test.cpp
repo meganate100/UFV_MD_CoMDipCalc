@@ -3,7 +3,7 @@
 #include <vector>
 #include <fstream>
 #include <sstream>
-//Testbest
+//TestBestTheRest
 int main() {
 struct Particle {
     float xCoM, yCoM, zCoM, xDip, yDip, zDip; //This will be were we store the final data for 1 particle. Right now I'm just using it as a general vector.
@@ -36,3 +36,4 @@ std::cout << std::endl << Part.at(0).yCoM;
     return 0;
 
 }
+
