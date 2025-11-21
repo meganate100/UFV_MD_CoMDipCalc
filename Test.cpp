@@ -6,7 +6,7 @@
 #include <cmath>
 // Structs
 struct Particle {
-    float timestamp, xCoM, yCoM, zCoM, CoMDist, xDip, yDip, zDip; //This will be were we store the final data for 1 particle. Right now I'm just using it as a general vector.
+    float timestamp, x, y, z, CoMDist, xDip, yDip, zDip; //This will be were we store the final data for 1 particle. Right now I'm just using it as a general vector.
 };
 
 // Variable Declaration
@@ -17,8 +17,9 @@ std::string PartType;
 std::istringstream stream(line);
 int PartNum;
 const float Charge = 0.6732053036584803;
-float xCoM, yCoM, zCoM;
-float CoMDist;
+float xCoM = 0, yCoM = 0, zCoM = 0;
+float x, y, z;
+float CoMDist = 0;
 float H1xCoM, H1yCoM, H1zCoM;
 float H2xCoM, H2yCoM, H2zCoM;
 float VxCoM, VyCoM, VzCoM;
@@ -66,9 +67,12 @@ int main(int argc, char* argv[])  {
                 stream.str(line);
                 TestOutput << line << std::endl;
                 stream.seekg(20, std::stringstream::beg);
-                stream >> xCoM >> yCoM >> zCoM;
+                stream >> x >> y>> z;
+                xCoM = xCoM + x; //Builds the center of mass vector for the configuration
+                yCoM = yCoM + y;
+                zCoM = zCoM + z;
 
-                CoMDist = sqrt(DotProduct(xCoM, yCoM, zCoM, xCoM, yCoM, zCoM));//Find radial distance from the CoM of the system.
+                CoMDist = sqrt(DotProduct(x, y, z, x, y, z));//Find radial distance from the CoM of the system.
 
                 std::getline(file, line);//Get Info on the 1st Hydrogen
                 stream.str(line);
@@ -92,9 +96,9 @@ int main(int argc, char* argv[])  {
                 yDip = (Charge)*(H1yCoM + H2yCoM- 2*VyCoM);
                 zDip = (Charge)*(H1zCoM + H2zCoM- 2*VzCoM);
 
-                Part.push_back({timestamp, xCoM, yCoM, zCoM, CoMDist, xDip, yDip, zDip});//Input all relevant info into a particle structure
-                TestOutput << "Timestamp: " << Part.at(((j)*(PartNum/4))+i-1).timestamp << "  xCoM: " << Part.at(((j)*(PartNum/4) )+i-1).xCoM 
-                << "  yCoM: " << Part.at(((j)*(PartNum/4) )+i-1).yCoM << "  zCoM: " << Part.at(((j)*(PartNum/4) )+i-1).zCoM 
+                Part.push_back({timestamp, x, y, z, CoMDist, xDip, yDip, zDip});//Input all relevant info into a particle structure
+                TestOutput << "Timestamp: " << Part.at(((j)*(PartNum/4))+i-1).timestamp << "  x: " << Part.at(((j)*(PartNum/4) )+i-1).x 
+                << "  y: " << Part.at(((j)*(PartNum/4) )+i-1).y << "  z: " << Part.at(((j)*(PartNum/4) )+i-1).z
                 << "  Radial Distance: " << Part.at(((j)*(PartNum/4) )+i-1).CoMDist << "  Net xDipole: " 
                 << Part.at(((j)*(PartNum/4) )+i-1).xDip << "  Net yDipole: " << Part.at(((j)*(PartNum/4) )+i-1).yDip 
                 << "  Net zDipole: " << Part.at(((j)*(PartNum/4) )+i-1).zDip << std::endl;
@@ -103,7 +107,23 @@ int main(int argc, char* argv[])  {
         } 
         else    {
             k++;
-            std::cout << "The else has been activated " << k <<std::endl;
+            std::cout << "First pass for timestamp t=" << timestamp << " has completed" <<std::endl;
+            xCoM = xCoM/((PartNum/4));//Finalize the real center of mass vector based on all the particles
+            yCoM = yCoM/((PartNum/4));
+            zCoM = zCoM/((PartNum/4));
+            std::cout << "The center of mass for the configuration at t=" << timestamp << " is xCoM: " << xCoM << " yCoM: " << yCoM << " zCoM: " << zCoM << std::endl;
+            for (int i = 1; i < (PartNum/4) +1; i++) {
+                x = Part.at(((j)*(PartNum/4) )+i-1).x - xCoM;//Get the position vectors of the particles to be relative to the CoM of the system.
+                y = Part.at(((j)*(PartNum/4) )+i-1).y - yCoM;
+                z = Part.at(((j)*(PartNum/4) )+i-1).z - zCoM;
+
+                 CoMDist = sqrt(DotProduct(x, y, z, x, y, z));//Find radial distance from the CoM of the system.
+
+                Part.at(((j)*(PartNum/4) )+i-1).x = x;
+                Part.at(((j)*(PartNum/4) )+i-1).y = y;
+                Part.at(((j)*(PartNum/4) )+i-1).z = k;
+                Part.at(((j)*(PartNum/4) )+i-1).CoMDist = CoMDist;
+            }
         }
     }
 TestOutput << "The Program might have worked" << std::endl;
