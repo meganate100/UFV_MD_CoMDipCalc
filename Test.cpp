@@ -34,6 +34,25 @@ float DotProduct(float x1, float y1, float z1, float x2, float y2, float z2)  {
     return result;
 }
 
+void CoMAdjustment(float xCoM, float yCoM, float zCoM, std::vector<Particle> Part, float MolNum, int j) {
+    std::cout << "CoM function has been entered";
+    for (int i = 1; i < MolNum +1; i++) {
+                x = Part.at(((j)*MolNum)+i-1).x - xCoM;//Get the position vectors of the particles to be relative to the CoM of the system.
+                y = Part.at(((j)*MolNum)+i-1).y - yCoM;
+                z = Part.at(((j)*MolNum)+i-1).z - zCoM;
+
+                CoMDist = sqrt(DotProduct(x, y, z, x, y, z));//Find radial distance from the CoM of the system.
+
+                Part.at(((j)*MolNum)+i-1).x = x;//Re-enters the position values relative to the CoM of the system for all the particles
+                Part.at(((j)*MolNum)+i-1).y = y;
+                Part.at(((j)*MolNum)+i-1).z = k;
+                Part.at(((j)*MolNum)+i-1).CoMDist = CoMDist;
+
+                std::cout << i << "\n";
+            }
+    return;
+}
+
 int GetFiles()  {
     return 0;
 }
@@ -110,18 +129,7 @@ int main(int argc, char* argv[])  {
             yCoM = yCoM/((PartNum/4));
             zCoM = zCoM/((PartNum/4));
             std::cout << "The center of mass for the configuration at t=" << timestamp << " is xCoM: " << xCoM << " yCoM: " << yCoM << " zCoM: " << zCoM << std::endl;
-            for (int i = 1; i < (PartNum/4) +1; i++) {
-                x = Part.at(((j)*(PartNum/4) )+i-1).x - xCoM;//Get the position vectors of the particles to be relative to the CoM of the system.
-                y = Part.at(((j)*(PartNum/4) )+i-1).y - yCoM;
-                z = Part.at(((j)*(PartNum/4) )+i-1).z - zCoM;
-
-                 CoMDist = sqrt(DotProduct(x, y, z, x, y, z));//Find radial distance from the CoM of the system.
-
-                Part.at(((j)*(PartNum/4) )+i-1).x = x;
-                Part.at(((j)*(PartNum/4) )+i-1).y = y;
-                Part.at(((j)*(PartNum/4) )+i-1).z = k;
-                Part.at(((j)*(PartNum/4) )+i-1).CoMDist = CoMDist;
-            }
+            CoMAdjustment(xCoM, yCoM, zCoM, Part, ((PartNum)/4), j);
         }
     }
 TestOutput << "The Program might have worked" << std::endl;
