@@ -72,8 +72,6 @@ int main(int argc, char* argv[])  {
                 yCoM = yCoM + y;
                 zCoM = zCoM + z;
 
-                CoMDist = sqrt(DotProduct(x, y, z, x, y, z));//Find radial distance from the CoM of the system.
-
                 std::getline(file, line);//Get Info on the 1st Hydrogen
                 stream.str(line);
                 TestOutput << line << std::endl;
