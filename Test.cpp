@@ -47,8 +47,6 @@ void CoMAdjustment(float xCoM, float yCoM, float zCoM, std::vector<Particle> Par
                 Part.at(((j)*MolNum)+i-1).y = y;
                 Part.at(((j)*MolNum)+i-1).z = k;
                 Part.at(((j)*MolNum)+i-1).CoMDist = CoMDist;
-
-                std::cout << i << "\n";
             }
     return;
 }
@@ -130,6 +128,9 @@ int main(int argc, char* argv[])  {
             zCoM = zCoM/((PartNum/4));
             std::cout << "The center of mass for the configuration at t=" << timestamp << " is xCoM: " << xCoM << " yCoM: " << yCoM << " zCoM: " << zCoM << std::endl;
             CoMAdjustment(xCoM, yCoM, zCoM, Part, ((PartNum)/4), j);
+            xCoM = 0;//Reset CoM variables for the system
+            yCoM = 0;
+            zCoM = 0;
         }
     }
 TestOutput << "The Program might have worked" << std::endl;
