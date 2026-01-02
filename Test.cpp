@@ -7,44 +7,39 @@
 
 // Structs
 struct Particle {
-    float timestamp, x, y, z, CoMDist, xDip, yDip, zDip; //This will be where we store the final data for 1 particle. Right now I'm just using it as a general vector.
+    float timestamp, x, y, z, distCoM, xDip, yDip, zDip; //This will be where we store the final data for 1 particle. Right now I'm just using it as a general vector.
 };
 
 struct Shell {
     float timestamp, NetXDip, NetYDip, NetZDip; //This will be where we store the timestamp and net dipol moment for a given shell.
 };
 
-//Test/Temporary Variables
-std::vector<std::vector<Shell>> TwoDArray;
-std::vector<Shell> TwoDArrayInput;
-float xBoxSize;
-float yBoxSize;
-float zBoxSize;
-bool ShellFlag = true;
-bool PartNumFlag = true;
-
-
 // Variable Declaration
-std::vector<Particle> Part;
+
+const float CHARGE = 0.6732053036584803;
+
 std::string line;
-std::string DontCare;
-std::string PartType;
+std::string inputString;
 std::istringstream stream(line);
-int PartNum;
-int MolNum;
-const float Charge = 0.6732053036584803;
+std::vector<Particle> particle;
+std::vector<std::vector<Shell>> dataArray;
+std::vector<Shell> workingArray;
+
+int partNum;
+int molNum;
+int currentShellNum;
+int numOfShells;
+int timeIndex = -1;
+
 float shellWidth;
-int shellNum;
-int maxShellNum;
 float xCoM = 0, yCoM = 0, zCoM = 0;
 float x, y, z;
-float CoMDist = 0;
+float distCoM = 0;
 float H1xCoM, H1yCoM, H1zCoM;
 float H2xCoM, H2yCoM, H2zCoM;
 float VxCoM, VyCoM, VzCoM;
 float xDip, yDip, zDip;
 float timestamp;
-int timeIndex = -1;
 
 //Function that will take a string which describes the particle type (eg: "O" for oxygen, "H" for Hydrogen) and translate it to the appropriate mass
 float DotProduct(float x1, float y1, float z1, float x2, float y2, float z2)  {   
@@ -53,68 +48,55 @@ float DotProduct(float x1, float y1, float z1, float x2, float y2, float z2)  {
 }
 
 // Get max shell size and adjust array size if new shells are required
+// Pass center of mass of particle as argument
 void CheckShellSize(float CoM) {
-    shellNum = std::ceil(CoM/shellWidth);
-    if (shellNum > maxShellNum) {
-        maxShellNum = shellNum;
-        for (int n = TwoDArrayInput.size(); n < maxShellNum; n++) {
-            TwoDArrayInput.push_back({0,0,0,0});
+    currentShellNum = std::ceil(CoM/shellWidth);
+    if (currentShellNum > numOfShells) {
+        numOfShells = currentShellNum;
+        for (int n = workingArray.size(); n < numOfShells; n++) {
+            workingArray.push_back({0,0,0,0});
         }
     }
 }
 
 void CoMAdjustment(std::ofstream& test) {
     std::cout << "CoM function has been entered" << std::endl;
-    for (int i = 1; i < MolNum +1; i++) {
-        x = Part.at(i-1).x - xCoM;//Get the position vectors of the particles to be relative to the CoM of the system.
-        y = Part.at(i-1).y - yCoM;
-        z = Part.at(i-1).z - zCoM;
+    for (int i = 1; i < molNum +1; i++) {
+        x = particle.at(i-1).x - xCoM;//Get the position vectors of the particles to be relative to the CoM of the system.
+        y = particle.at(i-1).y - yCoM;
+        z = particle.at(i-1).z - zCoM;
 
-        CoMDist = sqrt(DotProduct(x, y, z, x, y, z));//Find shellWidth distance from the CoM of the system.
+        distCoM = sqrt(DotProduct(x, y, z, x, y, z));//Find shellWidth distance from the CoM of the system.
 
-        CheckShellSize(CoMDist);
+        CheckShellSize(distCoM);
 
-        test << "CoM: " << CoMDist << std::endl;
-        test << "Array Size: " << TwoDArrayInput.size() << std::endl;
-        test << "Shell num: " << shellNum << std::endl;
+        particle.at(i-1).x = x;//Re-enters the position values relative to the CoM of the system for all the particles
+        particle.at(i-1).y = y;                
+        particle.at(i-1).z = z;
+        particle.at(i-1).distCoM = distCoM;
 
-        Part.at(i-1).x = x;//Re-enters the position values relative to the CoM of the system for all the particles
-        Part.at(i-1).y = y;                
-        Part.at(i-1).z = z;
-        Part.at(i-1).CoMDist = CoMDist;
+        for(int n = 1; n <= numOfShells; n++) {//This creates the net dipole moment of a shellWidth shell of a given timestamp.
+            if((distCoM/shellWidth) <= n){
+                //std::cout << "The current Net X Dipole moment of Shell #"<< n <<" is: " << workingArray.at(n-1).NetXDip <<
+                //" and the next particle's x Dipole moment is: " << particle.at(((timeIndex)*molNum)+i-1).xDip << std::endl;
 
-        for(int n = 1; n <= maxShellNum; n++) {//This creates the net dipole moment of a shellWidth shell of a given timestamp.
-            if((CoMDist/shellWidth) <= n){
-                //std::cout << "The current Net X Dipole moment of Shell #"<< n <<" is: " << TwoDArrayInput.at(n-1).NetXDip <<
-                //" and the next particle's x Dipole moment is: " << Part.at(((timeIndex)*MolNum)+i-1).xDip << std::endl;
-
-                TwoDArrayInput.at(n-1).NetXDip = TwoDArrayInput.at(n-1).NetXDip + Part.at(i-1).xDip;
-                TwoDArrayInput.at(n-1).NetYDip = TwoDArrayInput.at(n-1).NetYDip + Part.at(i-1).yDip;
-                TwoDArrayInput.at(n-1).NetZDip = TwoDArrayInput.at(n-1).NetZDip + Part.at(i-1).zDip;
+                workingArray.at(n-1).NetXDip = workingArray.at(n-1).NetXDip + particle.at(i-1).xDip;
+                workingArray.at(n-1).NetYDip = workingArray.at(n-1).NetYDip + particle.at(i-1).yDip;
+                workingArray.at(n-1).NetZDip = workingArray.at(n-1).NetZDip + particle.at(i-1).zDip;
                 break;
             }
         } 
     }
 
-    for (int n = 1; n <= maxShellNum; n++) {//Adds the timestamp to the shells
-        TwoDArrayInput.at(n-1).timestamp = Part.at(0).timestamp;
+    for (int n = 1; n <= numOfShells; n++) {//Adds the timestamp to the shells
+        workingArray.at(n-1).timestamp = particle.at(0).timestamp;
     }
 
-    TwoDArray.push_back({TwoDArrayInput});
-
-
-    for(int n = 1; n <= maxShellNum; n++) {
-        TwoDArrayInput.at(n-1).timestamp = 0;
-        TwoDArrayInput.at(n-1).NetXDip = 0;
-        TwoDArrayInput.at(n-1).NetYDip = 0;
-        TwoDArrayInput.at(n-1).NetZDip = 0;
-    }
-    //std::cout << "Timestamp completed for CoM adjustment function: " << TwoDArray.at(timeIndex).at(0).timestamp << std::endl;
+    // Store working array into the main data array then reset working array
+    dataArray.push_back({workingArray});
+    workingArray.clear();
+    workingArray = std::vector<Shell>(numOfShells, {0,0,0,0});
     return;
-}
-
-int GetFiles()  {
-    return 0;
 }
 
 int main(int argc, char* argv[])  {
@@ -122,22 +104,23 @@ int main(int argc, char* argv[])  {
         std::cout << "Please pass the input and output filename arguments respectively, and then the radius of the shell size for comparison. \nExample: test <input-filename> <out-filename> <shell-size-radius>" << std::endl;
         return 0;      
     }
-
-    shellWidth = atof(argv[3]);
+    
+    // Set arguments respectively as defined by user
     std::ifstream file(argv[1]);
     std::ofstream TestOutput(argv[2]);  
+    shellWidth = atof(argv[3]);
 
     // Check if array is empty, initialize if it isn't
-    if (TwoDArrayInput.size() == 0) {
-        TwoDArrayInput = std::vector<Shell>(1, {0,0,0,0});
+    if (workingArray.size() == 0) {
+        workingArray = std::vector<Shell>(1, {0,0,0,0});
     }
 
     while(std::getline(file, line)){
         stream.seekg(0, std::stringstream::beg);
         stream.str(line);
-        stream >> DontCare;
+        stream >> inputString;
 
-        if(DontCare == "Generated"){//This checks to see if the next line is starting a new timestamp.
+        if(inputString == "Generated"){//This checks to see if the next line is starting a new timestamp.
             timeIndex++;
             stream.seekg(31, std::stringstream::beg);//Skips to where the timestamp will be in the line
             stream >> timestamp;
@@ -145,71 +128,59 @@ int main(int argc, char* argv[])  {
             std::getline(file, line);
             stream.str(line);
             stream.seekg(0, std::stringstream::beg);
-            stream >> PartNum;
-            //TestOutput << PartNum << std::endl;
-            MolNum = (PartNum/4);
+            stream >> partNum;
+            //TestOutput << partNum << std::endl;
+            molNum = (partNum/4);
+            if (particle.size() == 0)
+                particle = std::vector<Particle>(molNum, {0,0,0,0,0,0,0,0});
 
-            if(PartNumFlag) {
-                Part = std::vector<Particle>(MolNum, {0,0,0,0,0,0,0,0});
-                PartNumFlag = false;
-                std::cout << Part.size();;
-            }
-
-            for (int i = 1; i < MolNum +1; i++) {
+            for (int i = 1; i < molNum +1; i++) {
                 //TestOutput << std::endl << i;
-                std::getline(file, line);//Get Info on the Oxygen
+                std::getline(file, line); // Get Info on the Oxygen
                 stream.str(line);
                 //TestOutput << line << std::endl;
                 stream.seekg(20, std::stringstream::beg);
                 stream >> x >> y>> z;
-                xCoM = xCoM + x; //Builds the center of mass vector for the configuration
+                xCoM = xCoM + x; // Builds the center of mass vector for the configuration
                 yCoM = yCoM + y;
                 zCoM = zCoM + z;
 
-                std::getline(file, line);//Get Info on the 1st Hydrogen
+                std::getline(file, line); // Get Info on the 1st Hydrogen
                 stream.str(line);
                 //TestOutput << line << std::endl;
                 stream.seekg(20, std::stringstream::beg);
                 stream >> H1xCoM >> H1yCoM >> H1zCoM;
 
-                std::getline(file, line);//Get Info on the 2nd Hydrogen
+                std::getline(file, line); // Get Info on the 2nd Hydrogen
                 stream.str(line);
                 //TestOutput << line << std::endl;
                 stream.seekg(20, std::stringstream::beg);
                 stream >> H2xCoM >> H2yCoM >> H2zCoM;
 
-                std::getline(file, line);//Get Info on the virtual site
+                std::getline(file, line); // Get Info on the virtual site
                 stream.str(line);
                 //TestOutput << line << std::endl;
                 stream.seekg(20, std::stringstream::beg);
                 stream >> VxCoM >> VyCoM >> VzCoM;
 
-                xDip = (Charge)*(H1xCoM + H2xCoM- 2*VxCoM);//Find Net Dipole moment of Molecule
-                yDip = (Charge)*(H1yCoM + H2yCoM- 2*VyCoM);
-                zDip = (Charge)*(H1zCoM + H2zCoM- 2*VzCoM);
+                xDip = (CHARGE)*(H1xCoM + H2xCoM- 2*VxCoM);// Find Net Dipole moment of Molecule
+                yDip = (CHARGE)*(H1yCoM + H2yCoM- 2*VyCoM);
+                zDip = (CHARGE)*(H1zCoM + H2zCoM- 2*VzCoM);
 
 
-                Part.at(i-1) = {timestamp, x, y, z, CoMDist, xDip, yDip, zDip};//Input all relevant info into a particle structure
-                // TestOutput << "Timestamp: " << Part.at(i-1).timestamp << "  x: " << Part.at(i-1).x 
-                // << "  y: " << Part.at(i-1).y << "  z: " << Part.at(i-1).z << "  Net xDipole: " 
-                // << Part.at(i-1).xDip << "  Net yDipole: " << Part.at(i-1).yDip 
-                // << "  Net zDipole: " << Part.at(i-1).zDip << std::endl;
+                particle.at(i-1) = {timestamp, x, y, z, distCoM, xDip, yDip, zDip}; // Input all relevant info into a particle structure
+                // TestOutput << "Timestamp: " << particle.at(i-1).timestamp << "  x: " << particle.at(i-1).x 
+                // << "  y: " << particle.at(i-1).y << "  z: " << particle.at(i-1).z << "  Net xDipole: " 
+                // << particle.at(i-1).xDip << "  Net yDipole: " << particle.at(i-1).yDip 
+                // << "  Net zDipole: " << particle.at(i-1).zDip << std::endl;
             }   
         } 
         else {
-            // if(ShellFlag) {//Gets the box size info for the data, which is used for finding how many shells there should be
-            //     CheckShellSize(CoMDist);
-            //     ShellFlag = false;
-            // }
+            xCoM = xCoM/molNum, yCoM = yCoM/molNum, zCoM = zCoM/molNum;
             std::cout << "First pass for timestamp t=" << timestamp << " has completed" <<std::endl;
-            xCoM = xCoM/MolNum;//Finalize the real center of mass vector based on all the particles
-            yCoM = yCoM/MolNum;
-            zCoM = zCoM/MolNum;
             std::cout << "The center of mass for the configuration at t=" << timestamp << " is xCoM: " << xCoM << " yCoM: " << yCoM << " zCoM: " << zCoM << std::endl;
             CoMAdjustment(TestOutput);
-            xCoM = 0;//Reset CoM variables for the system
-            yCoM = 0;
-            zCoM = 0;
+            xCoM = yCoM = zCoM = 0;//Reset CoM variables for the system
         }
     }
 return 0;
