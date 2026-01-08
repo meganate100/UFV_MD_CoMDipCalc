@@ -40,6 +40,7 @@ float H2xCoM, H2yCoM, H2zCoM;
 float VxCoM, VyCoM, VzCoM;
 float xDip, yDip, zDip;
 float timestamp;
+float dt, t0, tf = 0;
 
 //Function that will take a string which describes the particle type (eg: "O" for oxygen, "H" for Hydrogen) and translate it to the appropriate mass
 float DotProduct(float x1, float y1, float z1, float x2, float y2, float z2)  {   
@@ -59,8 +60,32 @@ void CheckShellSize(float CoM) {
     }
 }
 
+void CorrelationCalulation(std::ofstream& out) {
+    t0 = dataArray.at(0).at(0).timestamp;
+    dt = dataArray.at(1).at(0).timestamp - t0; //Finds the difference between timesteps
+    tf = dataArray.back().at(0).timestamp;
+    int n = dataArray.size();
+    int k = 0;
+    float cor = 0;
+    out << "Timesteps: " << dt << "\nInitial Time: " << t0 << "\nFinal Time: " << tf << "\n";
+    out << "Number of Shells: " << numOfShells << "\nShell Width: " << shellWidth << "\n";
+    for(int i = 0; i < dataArray.back().size() - 1; i++) {
+        out << "Correlation for shell: " << i << "\n";
+        while (n-k > 0) {
+            for(int j = 0; j < n-k; j++){
+                cor = cor + (DotProduct(dataArray.at(j).at(i).NetXDip, dataArray.at(j).at(i).NetYDip, dataArray.at(j).at(i).NetZDip,
+                                        dataArray.at(j+k).at(i).NetXDip, dataArray.at(j+k).at(i).NetYDip, dataArray.at(j+k).at(i).NetZDip))/(n-k);
+            }
+            out << "k = " <<  k <<  " n = " <<  n <<"\nCorrelation at t = " << t0 + k*dt << " is " << cor << "\n";
+            cor = 0;
+            k++;
+        }
+        k = 0;
+    }
+}
+
 void CoMAdjustment(std::ofstream& test) {
-    std::cout << "CoM function has been entered" << std::endl;
+    //std::cout << "CoM function has been entered" << std::endl;
     for (int i = 1; i < molNum +1; i++) {
         x = particle.at(i-1).x - xCoM;//Get the position vectors of the particles to be relative to the CoM of the system.
         y = particle.at(i-1).y - yCoM;
@@ -177,11 +202,13 @@ int main(int argc, char* argv[])  {
         } 
         else {
             xCoM = xCoM/molNum, yCoM = yCoM/molNum, zCoM = zCoM/molNum;
-            std::cout << "First pass for timestamp t=" << timestamp << " has completed" <<std::endl;
-            std::cout << "The center of mass for the configuration at t=" << timestamp << " is xCoM: " << xCoM << " yCoM: " << yCoM << " zCoM: " << zCoM << std::endl;
+            //std::cout << "First pass for timestamp t=" << timestamp << " has completed" <<std::endl;
+            //std::cout << "The center of mass for the configuration at t=" << timestamp << " is xCoM: " << xCoM << " yCoM: " << yCoM << " zCoM: " << zCoM << std::endl;
             CoMAdjustment(TestOutput);
             xCoM = yCoM = zCoM = 0;//Reset CoM variables for the system
         }
     }
+    CorrelationCalulation(TestOutput);
+    std::cout << "Done" << std::endl;
 return 0;
 }
