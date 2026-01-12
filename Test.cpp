@@ -29,7 +29,6 @@ int partNum;
 int molNum;
 int currentShellNum;
 int numOfShells;
-int timeIndex = -1;
 
 float shellWidth;
 float xCoM = 0, yCoM = 0, zCoM = 0;
@@ -54,6 +53,11 @@ void CheckShellSize(float CoM) {
     currentShellNum = std::ceil(CoM/shellWidth);
     if (currentShellNum > numOfShells) {
         numOfShells = currentShellNum;
+        for (int j = 0; j < dataArray.size(); j++) {
+            for (int n = workingArray.size(); n < numOfShells; n++) {
+                dataArray.at(j).push_back({0,0,0,0});
+            }   
+        }
         for (int n = workingArray.size(); n < numOfShells; n++) {
             workingArray.push_back({0,0,0,0});
         }
@@ -69,7 +73,8 @@ void CorrelationCalulation(std::ofstream& out) {
     float cor = 0;
     out << "Timesteps: " << dt << "\nInitial Time: " << t0 << "\nFinal Time: " << tf << "\n";
     out << "Number of Shells: " << numOfShells << "\nShell Width: " << shellWidth << "\n";
-    for(int i = 0; i < dataArray.back().size() - 1; i++) {
+    std::cout << "Front: " << dataArray.front().size() << " and back: " << dataArray.back().size() << std::endl;
+    for(int i = 0; i < dataArray.back().size(); i++) {
         out << "Correlation for shell: " << i << "\n";
         while (n-k > 0) {
             for(int j = 0; j < n-k; j++){
@@ -146,7 +151,6 @@ int main(int argc, char* argv[])  {
         stream >> inputString;
 
         if(inputString == "Generated"){//This checks to see if the next line is starting a new timestamp.
-            timeIndex++;
             stream.seekg(31, std::stringstream::beg);//Skips to where the timestamp will be in the line
             stream >> timestamp;
             //TestOutput << std::endl << timestamp << std::endl;     
@@ -202,7 +206,7 @@ int main(int argc, char* argv[])  {
         } 
         else {
             xCoM = xCoM/molNum, yCoM = yCoM/molNum, zCoM = zCoM/molNum;
-            //std::cout << "First pass for timestamp t=" << timestamp << " has completed" <<std::endl;
+            std::cout << "First pass for timestamp t=" << timestamp << " has completed" <<std::endl;
             //std::cout << "The center of mass for the configuration at t=" << timestamp << " is xCoM: " << xCoM << " yCoM: " << yCoM << " zCoM: " << zCoM << std::endl;
             CoMAdjustment(TestOutput);
             xCoM = yCoM = zCoM = 0;//Reset CoM variables for the system
