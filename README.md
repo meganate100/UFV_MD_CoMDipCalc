@@ -1,2 +1,2 @@
 # UFV_MD_CoMDipCalc
-Hello World or something basic like that.
+Program that takes .gro file for H20 and calculates the correlation function.
